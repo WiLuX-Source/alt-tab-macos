@@ -1,0 +1,48 @@
+name: Fork build
+
+on:
+  workflow_dispatch:
+
+env:
+  APP_NAME: AltTab
+  VERSION: 10.12.0
+  XCODE_BUILD_PATH: DerivedData/Build/Products/Debug
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          XCODE_PATH="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
+      - name: Fill local build placeholders
+        run: |
+          set -euo pipefail
+          sed -i '' -e "s/#VERSION#/$VERSION/g" Info.plist
+          sed -i '' -e "s/#FEEDBACK_TOKEN#/fork-build/g" Info.plist
+          sed -i '' -e "s/#APPCENTER_SECRET#/fork-build/g" Info.plist
+      - name: Set up local signing
+        run: scripts/codesign/setup_ci_pr.sh
+      - name: Build app
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -workspace alt-tab-macos.xcworkspace \
+            -scheme Debug \
+            -configuration Debug \
+            -derivedDataPath DerivedData
+          file "$XCODE_BUILD_PATH/$APP_NAME.app/Contents/MacOS/$APP_NAME"
+      - name: Package app
+        run: |
+          set -euo pipefail
+          cd "$XCODE_BUILD_PATH"
+          ditto -c -k --keepParent "$APP_NAME.app" "$APP_NAME-$VERSION-debug.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AltTab-${{ env.VERSION }}-debug
+          path: ${{ env.XCODE_BUILD_PATH }}/AltTab-${{ env.VERSION }}-debug.zip
+          if-no-files-found: error
