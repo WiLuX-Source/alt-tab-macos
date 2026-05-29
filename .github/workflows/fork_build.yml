@@ -28,9 +28,6 @@ jobs:
           sed -i '' -e "s/#FEEDBACK_TOKEN#/fork-build/g" Info.plist
           sed -i '' -e "s/#APPCENTER_SECRET#/fork-build/g" Info.plist
 
-      - name: Set up ad-hoc signing
-        run: scripts/codesign/setup_ci_pr.sh
-
       - name: Build app
         run: |
           set -euo pipefail
@@ -39,9 +36,9 @@ jobs:
             -scheme Release \
             -configuration Release \
             -derivedDataPath DerivedData \
-            CODE_SIGN_IDENTITY="Local Self-Signed" \
+            CODE_SIGN_IDENTITY="-" \
             OTHER_CODE_SIGN_FLAGS="--timestamp=none --deep" \
-            ENABLE_HARDENED_RUNTIME=NO
+            ENABLE_HARDENED_RUNTIME=YES
           file "$XCODE_BUILD_PATH/$APP_NAME.app/Contents/MacOS/$APP_NAME"
 
       - name: Package app
